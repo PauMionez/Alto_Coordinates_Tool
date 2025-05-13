@@ -167,7 +167,6 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                         CodingTxtDocument = new TextDocument(textContent);
                     }
                 }
-
             }
             catch (Exception ex)
             {
