@@ -463,8 +463,6 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         #endregion
 
 
-
-
     }
 
     #region make darkmode foregound color text
