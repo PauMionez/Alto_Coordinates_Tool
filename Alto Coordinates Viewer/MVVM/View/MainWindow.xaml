@@ -92,6 +92,8 @@
                 <dx:Interaction.Behaviors>
                     <dx:EventToCommand EventName="Loaded" Command="{Binding AvalonTextEditor_LoadedCommand}" CommandParameter="{Binding ElementName=avalonTextEditor}"/>
                     <dx:EventToCommand EventName="PreviewMouseWheel" Command="{Binding ZoomXmlTextViewerCommand}" PassEventArgsToCommand="True"/>
+                    <dx:EventToCommand EventName="TextChanged" Command="{Binding XmlTextChangedCommand}"/>
+                    <dx:EventToCommand EventName="PreviewMouseUp" Command="{Binding AvalonTextSelectionChangedCommand}" />
                 </dx:Interaction.Behaviors>
             </avalonEdit:TextEditor>
 
@@ -131,11 +133,12 @@
                                     </ItemsControl.ItemContainerStyle>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Rectangle Stroke="Red"
+                                            <Rectangle Stroke="{Binding ColorBox}"
                                                        StrokeThickness="1"
                                                        Width="{Binding ScaledWidth}"
                                                        Height="{Binding ScaledHeight}"
-                                                       Fill="Transparent" />
+                                                       Fill="Transparent">
+                                            </Rectangle>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

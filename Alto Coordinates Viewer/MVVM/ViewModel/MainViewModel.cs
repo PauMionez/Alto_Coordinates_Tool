@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -8,30 +7,27 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Xml;
 using System.Xml.Linq;
 using Alto_Coordinates_Viewer.MVVM.Model;
 using DevExpress.Mvvm;
-using Emgu.CV.Structure;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Highlighting;
-using ICSharpCode.AvalonEdit.Rendering;
 using ICSharpCode.AvalonEdit.Utils;
 namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 {
     class MainViewModel : Abstract.ViewBaseModel
     {
-        public AsyncCommand<MouseWheelEventArgs> ZoomXmlTextViewerCommand { get; private set; }
-        public AsyncCommand<TextEditor> AvalonTextEditor_LoadedCommand { get; private set; }
+        public DelegateCommand<MouseWheelEventArgs> ZoomXmlTextViewerCommand { get; private set; }
+        public DelegateCommand<TextEditor> AvalonTextEditor_LoadedCommand { get; private set; }
+        public DelegateCommand<SizeChangedEventArgs> ImageSizeChangedCommand { get; private set; }
         public AsyncCommand SelectAltoFilesCommand { get; private set; }
         public AsyncCommand SelectImageFilesCommand { get; private set; }
-        public DelegateCommand<SizeChangedEventArgs> ImageSizeChangedCommand { get; private set; }
         public DelegateCommand SaveUpdateXmlFileCommand { get; private set; }
+        public DelegateCommand XmlTextChangedCommand { get; private set; }
+        public DelegateCommand AvalonTextSelectionChangedCommand { get; private set; }
 
         #region Properties
 
@@ -55,7 +51,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         public BitmapSource SelectedImageSource
         {
             get { return _selectedImageSource; }
-            set { _selectedImageSource = value; RaisePropertiesChanged(nameof(SelectedImageSource));  }
+            set { _selectedImageSource = value; RaisePropertiesChanged(nameof(SelectedImageSource)); }
         }
 
 
@@ -121,28 +117,36 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         }
 
 
+
+
         #endregion
 
         #region Fields
         public string GlobalXmlFilePath;
+
         #endregion
 
 
         public MainViewModel()
         {
 
-            ZoomXmlTextViewerCommand = new AsyncCommand<MouseWheelEventArgs>(ZoomXmlTextViewer);
-            AvalonTextEditor_LoadedCommand = new AsyncCommand<TextEditor>(AvalonTextEditor_Loaded);
+            ZoomXmlTextViewerCommand = new DelegateCommand<MouseWheelEventArgs>(ZoomXmlTextViewer);
+            AvalonTextEditor_LoadedCommand = new DelegateCommand<TextEditor>(AvalonTextEditor_Loaded);
             SelectAltoFilesCommand = new AsyncCommand(SelectAltoFiles);
             SelectImageFilesCommand = new AsyncCommand(SelectImageFiles);
             ImageSizeChangedCommand = new DelegateCommand<SizeChangedEventArgs>(ImageSizeChanged);
             SaveUpdateXmlFileCommand = new DelegateCommand(SaveUpdateXmlFile);
+            XmlTextChangedCommand = new DelegateCommand(XmlTextChanged);
+            AvalonTextSelectionChangedCommand = new DelegateCommand(AvalonTextSelectionChanged);
 
             AltoCollection = new ObservableCollection<AltoModel>();
 
             XmlTextFontSize = 12;
+
         }
 
+
+        #region File Selection
         /// <summary>
         /// Select ALTO XML file
         /// Load the file in text viewer
@@ -155,7 +159,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                 string altoFilePath = GetFilePath(@"Select alto files (*.xml)", "*.xml", "Open multiple xml documents");
                 if (altoFilePath == null) { return; }
 
-               
+
                 GlobalXmlFilePath = altoFilePath;
                 string textContent = "";
                 // Load xml file in textviewer
@@ -226,7 +230,102 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                 ErrorMessage(ex);
             }
         }
+        #endregion
 
+
+        #region EventToCommand 
+
+        /// <summary>
+        /// Load xml text editor attach with scroll event
+        /// Change Single Tag Color 
+        /// </summary>
+        /// <param name="xamlInterfaceControlElement"></param>
+        /// <returns></returns>
+        private void AvalonTextEditor_Loaded(TextEditor xamlInterfaceControlElement)
+        {
+            try
+            {
+                CodingTextControl = xamlInterfaceControlElement;
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage(ex);
+            }
+        }
+
+        /// <summary>
+        /// TextChanged event handler for the XML text editor.
+        /// This will be update the bounding box when the xml text changed.
+        /// </summary>
+        private void XmlTextChanged()
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(CodingTextControl.Text))
+                {
+                    ParseAlto(CodingTextControl.Text);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage(ex);
+            }
+        }
+
+        /// <summary>
+        /// Highlight the selected <String> in the text editor
+        /// And update the color of the corresponding ALTO boxes
+        /// </summary>
+        private void AvalonTextSelectionChanged()
+        {
+            try
+            {
+                string selectedText = CodingTextControl.TextArea.Selection.GetText()?.Trim();
+
+
+                Regex stringRegex = new Regex(@"<String ID=""(.*?)"" HPOS=""(.*?)"" VPOS=""(.*?)"" WIDTH=""(.*?)"" HEIGHT=""(.*?)"" WC=""(.*?)"" CONTENT=""(.*?)""", RegexOptions.Compiled);
+
+                Match match = stringRegex.Match(selectedText);
+
+                if (match.Success)
+                {
+                    // Extract coordinates of selected string
+                    double selectedX = double.Parse(match.Groups[2].Value);
+                    double selectedY = double.Parse(match.Groups[3].Value);
+                    double selectedWidth = double.Parse(match.Groups[4].Value);
+                    double selectedHeight = double.Parse(match.Groups[5].Value);
+
+                    foreach (var word in AltoCollection)
+                    {
+                        // Checking whether its position and size match the coordinates of the <String>
+                        // Floating-point comparison with a small tolerance (0.1)
+                        if (Math.Abs(word.X - selectedX) < 0.1 &&
+                            Math.Abs(word.Y - selectedY) < 0.1 &&
+                            Math.Abs(word.Width - selectedWidth) < 0.1 &&
+                            Math.Abs(word.Height - selectedHeight) < 0.1)
+                        {
+                            word.ColorBox = Brushes.Green;
+                        }
+                        else
+                        {
+                            word.ColorBox = Brushes.Red;
+                        }
+                    }
+                }
+                else
+                {
+                    // No <String> selected, reset all to Red
+                    foreach (var word in AltoCollection)
+                    {
+                        word.ColorBox = Brushes.Red;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage(ex);
+            }
+        }
 
         /// <summary>
         /// Zoom Xml Text Control
@@ -234,7 +333,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         /// </summary>
         /// <param name="args"></param>
         /// <returns></returns>
-        private async Task ZoomXmlTextViewer(MouseWheelEventArgs args)
+        private void ZoomXmlTextViewer(MouseWheelEventArgs args)
         {
             try
             {
@@ -262,44 +361,6 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         }
 
 
-
-        /// <summary>
-        /// Load xml text editor attach with scroll event
-        /// Change Single Tag Color 
-        /// </summary>
-        /// <param name="xamlInterfaceControlElement"></param>
-        /// <returns></returns>
-        private async Task AvalonTextEditor_Loaded(TextEditor xamlInterfaceControlElement)
-        {
-            try
-            {
-                CodingTextControl = xamlInterfaceControlElement;
-
-                // Attach text changed event to trigger red box updates on-the-fly
-                CodingTextControl.TextChanged += (s, e) =>
-                {
-                    try
-                    {
-                        if (!string.IsNullOrWhiteSpace(CodingTextControl.Text))
-                        {
-                            ParseAlto(CodingTextControl.Text);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorMessage(ex);
-                    }
-                };
-
-                //CodingTextControl.SyntaxHighlighting.GetNamedColor("XmlTag").Foreground = new SimpleHighlightingBrush(Colors.White);
-                //CodingTextControl.TextArea.TextView.LineTransformers.Add(new TagChangeColor());
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage(ex);
-            }
-        }
-
         /// <summary>
         /// Triggered when the image is resized (e.g., when the window or control size changes).
         /// Updates the rendered image dimensions and rescales all overlay rectangles accordingly.
@@ -325,6 +386,9 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             }
 
         }
+
+        #endregion
+
 
         #region Create Bounding box to highlight the ALTO coordinates
         /// <summary>
@@ -375,7 +439,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             {
                 ErrorMessage(ex);
             }
-            
+
         }
 
         /// <summary>
@@ -387,7 +451,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             try
             {
                 //gets the original ALTO image size and the current displayed image size
-                double scaleX = actualWidth / OriginalImagePixelWidth;   
+                double scaleX = actualWidth / OriginalImagePixelWidth;
                 double scaleY = actualHeight / OriginalImagePixelHeight;
 
                 //uppdate the scaled position and size for each ALTO box
@@ -398,6 +462,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                     box.ScaledY = box.Y * scaleY;
                     box.ScaledWidth = box.Width * scaleX;
                     box.ScaledHeight = box.Height * scaleY;
+                    box.ColorBox = Brushes.Red;
                 }
 
             }
@@ -405,11 +470,12 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             {
                 ErrorMessage(ex);
             }
-           
+
         }
+
         #endregion
 
-        
+
         #region Save and Update Xml File
 
         /// <summary>
@@ -460,194 +526,203 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 
         }
 
+        
+
+        
         #endregion
 
 
     }
 
     #region make darkmode foregound color text
-    internal class TagChangeColor : DocumentColorizingTransformer
-    {
+    //internal class TagChangeColor : DocumentColorizingTransformer
+    //{
 
-        // Match URLs (adjust the pattern to match more types of URLs)
-        private readonly Regex sLinkRegex = new Regex(@"https?:\/\/[^\s""<>]+", RegexOptions.Compiled);
+    //    // Match URLs (adjust the pattern to match more types of URLs)
+    //    private readonly Regex sLinkRegex = new Regex(@"https?:\/\/[^\s""<>]+", RegexOptions.Compiled);
 
-        // Match XML tags
-        private readonly Regex sTagRegex = new Regex(@"<\??/?[\w:.-]+", RegexOptions.Compiled);
+    //    // Match XML tags
+    //    private readonly Regex sTagRegex = new Regex(@"<\??/?[\w:.-]+", RegexOptions.Compiled);
 
-        // Match XML tags with attributes endtag
-        private readonly Regex sTagEndRegex = new Regex(@"(\?>|/>|>)", RegexOptions.Compiled);
+    //    // Match XML tags with attributes endtag
+    //    private readonly Regex sTagEndRegex = new Regex(@"(\?>|/>|>)", RegexOptions.Compiled);
 
-        // Match attribute names (before = )
-        private readonly Regex sAttributeRegex = new Regex(@"[\w:.-]+(?=\s*=)", RegexOptions.Compiled);
+    //    // Match attribute names (before = )
+    //    private readonly Regex sAttributeRegex = new Regex(@"[\w:.-]+(?=\s*=)", RegexOptions.Compiled);
 
-        // Match attribute values (inside quotes)
-        private readonly Regex sAttributeValueRegex = new Regex("\"([^\"]*)\"", RegexOptions.Compiled);
+    //    // Match attribute values (inside quotes)
+    //    private readonly Regex sAttributeValueRegex = new Regex("\"([^\"]*)\"", RegexOptions.Compiled);
 
-        // Match the ="
-        private readonly Regex sEqualQuoteRegex = new Regex(@"=\s*[""']", RegexOptions.Compiled);
+    //    // Match the ="
+    //    private readonly Regex sEqualQuoteRegex = new Regex(@"=\s*[""']", RegexOptions.Compiled);
 
-        // Match text content inside tags
-        private readonly Regex sTextContentRegex = new Regex(@">(.*?)<", RegexOptions.Compiled);
+    //    // Match text content inside tags
+    //    private readonly Regex sTextContentRegex = new Regex(@">(.*?)<", RegexOptions.Compiled);
 
-        protected override void ColorizeLine(DocumentLine line)
-        {
-            string text = CurrentContext.Document.GetText(line);
+    //    protected override void ColorizeLine(DocumentLine line)
+    //    {
+    //        string text = CurrentContext.Document.GetText(line);
 
-            // Tag names
-            foreach (Match match in sTagRegex.Matches(text))
-                SetColor(line, match, Color.FromRgb(86, 156, 214));
+    //        // Tag names
+    //        foreach (Match match in sTagRegex.Matches(text))
+    //            SetColor(line, match, Color.FromRgb(86, 156, 214));
 
-            // Tag endings
-            foreach (Match match in sTagEndRegex.Matches(text))
-                SetColor(line, match, Color.FromRgb(86, 156, 214));
+    //        // Tag endings
+    //        foreach (Match match in sTagEndRegex.Matches(text))
+    //            SetColor(line, match, Color.FromRgb(86, 156, 214));
 
-            // Attribute names
-            foreach (Match match in sAttributeRegex.Matches(text))
-            {
-                SetColor(line, match, Color.FromRgb(156, 220, 254));
-            }
+    //        // Attribute names
+    //        foreach (Match match in sAttributeRegex.Matches(text))
+    //        {
+    //            SetColor(line, match, Color.FromRgb(156, 220, 254));
+    //        }
 
-            // Attribute values (inside quotes)
-            foreach (Match match in sAttributeValueRegex.Matches(text))
-            {
+    //        // Attribute values (inside quotes)
+    //        foreach (Match match in sAttributeValueRegex.Matches(text))
+    //        {
 
-                // Check if the attribute value is a URL
-                if (sLinkRegex.IsMatch(match.Value))
-                {
-                    Console.WriteLine("Found URL: " + match.Value); // Debugging the matched URL
-                    SetColor(line, match, Color.FromRgb(255, 192, 0)); // Yellowish-Orange
-                }
-                else
-                {
-                    SetColor(line, match, Color.FromRgb(206, 145, 120));
-                }
-            }
+    //            // Check if the attribute value is a URL
+    //            if (sLinkRegex.IsMatch(match.Value))
+    //            {
+    //                Console.WriteLine("Found URL: " + match.Value); // Debugging the matched URL
+    //                SetColor(line, match, Color.FromRgb(255, 192, 0)); // Yellowish-Orange
+    //            }
+    //            else
+    //            {
+    //                SetColor(line, match, Color.FromRgb(206, 145, 120));
+    //            }
+    //        }
 
-            // Equal-Quote signs (=")
-            foreach (Match match in sEqualQuoteRegex.Matches(text))
-                SetColor(line, match, Color.FromRgb(206, 145, 120));
+    //        // Equal-Quote signs (=")
+    //        foreach (Match match in sEqualQuoteRegex.Matches(text))
+    //            SetColor(line, match, Color.FromRgb(206, 145, 120));
 
-            // Text inside tags (content)
-            foreach (Match match in sTextContentRegex.Matches(text))
-                SetColor(line, match, Color.FromRgb(212, 212, 212));
-        }
+    //        // Text inside tags (content)
+    //        foreach (Match match in sTextContentRegex.Matches(text))
+    //            SetColor(line, match, Color.FromRgb(212, 212, 212));
+    //    }
 
-        // Helper to set the color
-        private void SetColor(DocumentLine line, Match match, Color color)
-        {
-            if (match.Success)
-            {
-                int start = line.Offset + match.Index;
-                int end = start + match.Length;
-                ChangeLinePart(start, end, (visualElement) =>
-                {
-                    visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(color));
-                    visualElement.TextRunProperties.SetTextDecorations(null); // no underline
-                });
-            }
-        }
-
-
-        #region dump
-        //protected override void ColorizeLine(DocumentLine line)
-        //{
-        //    string text = CurrentContext.Document.GetText(line);
+    //    // Helper to set the color
+    //    private void SetColor(DocumentLine line, Match match, Color color)
+    //    {
+    //        if (match.Success)
+    //        {
+    //            int start = line.Offset + match.Index;
+    //            int end = start + match.Length;
+    //            ChangeLinePart(start, end, (visualElement) =>
+    //            {
+    //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(color));
+    //                visualElement.TextRunProperties.SetTextDecorations(null); // no underline
+    //            });
+    //        }
+    //    }
 
 
-        //    // Match links inside the text (e.g., http://...)
-        //    MatchCollection linkMatches = sLinkRegex.Matches(text);
-        //    foreach (Match match in linkMatches)
-        //    {
-        //        if (match.Success)
-        //        {
-        //            int startOffset = line.Offset + match.Index;
-        //            int endOffset = startOffset + match.Length;
-        //            ChangeLinePart(startOffset, endOffset, (visualElement) =>
-        //            {
-        //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(255, 192, 0))); // Yellowish-orange color
-        //            });
-        //        }
-        //    }
-
-        //    // 1. XML Tags
-        //    foreach (Match match in sTagRegex.Matches(text))
-        //    {
-        //        int start = line.Offset + match.Index;
-        //        int end = start + match.Length;
-        //        ChangeLinePart(start, end, (visualElement) =>
-        //        {
-        //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(86, 156, 214))); // #569CD6
-        //        });
-        //    }
-
-        //    // 2. Attribute Names
-        //    foreach (Match match in sAttributeRegex.Matches(text))
-        //    {
-        //        int start = line.Offset + match.Index;
-        //        int end = start + match.Length;
-        //        ChangeLinePart(start, end, (visualElement) =>
-        //        {
-        //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(156, 220, 254))); // #9CDCFE
-        //        });
-        //    }
-
-        //    // 3. Attribute Equal Signs + Quotes
-        //    foreach (Match match in sEqualQuoteRegex.Matches(text))
-        //    {
-        //        int start = line.Offset + match.Index;
-        //        int end = start + match.Length;
-        //        ChangeLinePart(start, end, (visualElement) =>
-        //        {
-        //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(255, 128, 128))); // Light reddish color
-        //        });
-        //    }
-
-        //    // 4. Attribute Values
-        //    foreach (Match match in sAttributeValueRegex.Matches(text))
-        //    {
-        //        int start = line.Offset + match.Index;
-        //        int end = start + match.Length;
-        //        ChangeLinePart(start, end, (visualElement) =>
-        //        {
-        //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(206, 145, 120))); // #CE9178
-        //        });
-        //    }
-
-        //    // 5. Text content between tags
-        //    foreach (Match match in sTextContentRegex.Matches(text))
-        //    {
-        //        if (!string.IsNullOrWhiteSpace(match.Groups[1].Value))
-        //        {
-        //            int start = line.Offset + match.Index + 1;
-        //            int end = start + match.Groups[1].Length;
-        //            ChangeLinePart(start, end, (visualElement) =>
-        //            {
-        //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(212, 212, 212))); // #D4D4D4
-        //            });
-        //        }
-        //    }
-
-        //    // Match the tag endings (>, />, ?>)
-        //    MatchCollection tagEndMatches = sTagEndRegex.Matches(text);
-        //    foreach (Match match in tagEndMatches)
-        //    {
-        //        if (match.Success)
-        //        {
-        //            int startOffset = line.Offset + match.Index;
-        //            int endOffset = startOffset + match.Length;
-        //            ChangeLinePart(startOffset, endOffset, (visualElement) =>
-        //            {
-        //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush( Color.FromRgb(86, 156, 214))); // Same blue as for < and <? 
-        //            });
-        //        }
-        //    }
+    #region dump
 
 
 
-        //}
 
-        #endregion
-        #endregion
-    }
+
+
+    //protected override void ColorizeLine(DocumentLine line)
+    //{
+    //    string text = CurrentContext.Document.GetText(line);
+
+
+    //    // Match links inside the text (e.g., http://...)
+    //    MatchCollection linkMatches = sLinkRegex.Matches(text);
+    //    foreach (Match match in linkMatches)
+    //    {
+    //        if (match.Success)
+    //        {
+    //            int startOffset = line.Offset + match.Index;
+    //            int endOffset = startOffset + match.Length;
+    //            ChangeLinePart(startOffset, endOffset, (visualElement) =>
+    //            {
+    //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(255, 192, 0))); // Yellowish-orange color
+    //            });
+    //        }
+    //    }
+
+    //    // 1. XML Tags
+    //    foreach (Match match in sTagRegex.Matches(text))
+    //    {
+    //        int start = line.Offset + match.Index;
+    //        int end = start + match.Length;
+    //        ChangeLinePart(start, end, (visualElement) =>
+    //        {
+    //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(86, 156, 214))); // #569CD6
+    //        });
+    //    }
+
+    //    // 2. Attribute Names
+    //    foreach (Match match in sAttributeRegex.Matches(text))
+    //    {
+    //        int start = line.Offset + match.Index;
+    //        int end = start + match.Length;
+    //        ChangeLinePart(start, end, (visualElement) =>
+    //        {
+    //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(156, 220, 254))); // #9CDCFE
+    //        });
+    //    }
+
+    //    // 3. Attribute Equal Signs + Quotes
+    //    foreach (Match match in sEqualQuoteRegex.Matches(text))
+    //    {
+    //        int start = line.Offset + match.Index;
+    //        int end = start + match.Length;
+    //        ChangeLinePart(start, end, (visualElement) =>
+    //        {
+    //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(255, 128, 128))); // Light reddish color
+    //        });
+    //    }
+
+    //    // 4. Attribute Values
+    //    foreach (Match match in sAttributeValueRegex.Matches(text))
+    //    {
+    //        int start = line.Offset + match.Index;
+    //        int end = start + match.Length;
+    //        ChangeLinePart(start, end, (visualElement) =>
+    //        {
+    //            visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(206, 145, 120))); // #CE9178
+    //        });
+    //    }
+
+    //    // 5. Text content between tags
+    //    foreach (Match match in sTextContentRegex.Matches(text))
+    //    {
+    //        if (!string.IsNullOrWhiteSpace(match.Groups[1].Value))
+    //        {
+    //            int start = line.Offset + match.Index + 1;
+    //            int end = start + match.Groups[1].Length;
+    //            ChangeLinePart(start, end, (visualElement) =>
+    //            {
+    //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush(Color.FromRgb(212, 212, 212))); // #D4D4D4
+    //            });
+    //        }
+    //    }
+
+    //    // Match the tag endings (>, />, ?>)
+    //    MatchCollection tagEndMatches = sTagEndRegex.Matches(text);
+    //    foreach (Match match in tagEndMatches)
+    //    {
+    //        if (match.Success)
+    //        {
+    //            int startOffset = line.Offset + match.Index;
+    //            int endOffset = startOffset + match.Length;
+    //            ChangeLinePart(startOffset, endOffset, (visualElement) =>
+    //            {
+    //                visualElement.TextRunProperties.SetForegroundBrush(new SolidColorBrush( Color.FromRgb(86, 156, 214))); // Same blue as for < and <? 
+    //            });
+    //        }
+    //    }
+
+
+
+    //}
+    //}
+
+    #endregion
+    #endregion
 }

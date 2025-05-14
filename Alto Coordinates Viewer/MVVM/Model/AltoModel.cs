@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using DevExpress.Mvvm;
 
 namespace Alto_Coordinates_Viewer.MVVM.Model
@@ -66,6 +67,17 @@ namespace Alto_Coordinates_Viewer.MVVM.Model
             get => _scaledHeight;
             set { _scaledHeight = value; RaisePropertiesChanged(nameof(ScaledHeight)); }
         }
+
+        private Brush _colorBox;
+
+        public Brush ColorBox
+        {
+            get { return _colorBox; }
+            set { _colorBox = value; RaisePropertiesChanged(nameof(ColorBox)); }
+        }
+
+        public string XmlLine { get; set; } // The original <String>...</String><SP.../> line
+
 
         //public double X { get; set; }
         //public double Y { get; set; }
