@@ -217,7 +217,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         {
             try
             {
-
+                //Select image file
                 List<string> ImageExtensionCollection = new List<string> { "jpg", "jpeg", "png", "tif", "tiff" };
 
                 string filterExtensions = string.Join(";", ImageExtensionCollection.Select(ext => $"*.{ext}"));
