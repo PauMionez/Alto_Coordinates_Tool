@@ -16,7 +16,7 @@ namespace Alto_Coordinates_Viewer.Abstract
     abstract class ViewBaseModel : BindableBase
     {
         private string ApplicationName => "Alto Coordinates Viewer Tool 2025";
-        private Version Version => new Version(1, 0, 0, 0);
+        private Version Version => new Version(1, 2, 2, 2);
         public string Title => $"{ApplicationName} v{Version}";
 
 

@@ -1,0 +1,33 @@
+﻿<UserControl x:Class="Alto_Coordinates_Viewer.MVVM.View.AltoXmlViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Alto_Coordinates_Viewer.MVVM.View"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:dx="http://schemas.devexpress.com/winfx/2008/xaml/mvvm"
+             xmlns:vm="clr-namespace:Alto_Coordinates_Viewer.MVVM.ViewModel"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+             mc:Ignorable="d" 
+             >
+    <Grid >
+        <avalonEdit:TextEditor Name="avalonTextEditor" SyntaxHighlighting="XML" FontFamily="Consolas" 
+                       FontSize="{Binding XmlTextFontSize}" WordWrap="True" Background="#FF1A1A1A"
+                       Document="{Binding CodingTxtDocument, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                       VirtualizingPanel.IsVirtualizing="True" ShowLineNumbers="True"  >
+            <dx:Interaction.Behaviors>
+                <dx:EventToCommand EventName="Loaded" 
+                           Command="{Binding AvalonTextEditor_LoadedCommand}" 
+                           CommandParameter="{Binding ElementName=avalonTextEditor}"/>
+                <dx:EventToCommand EventName="PreviewMouseWheel" 
+                           Command="{Binding ZoomXmlTextViewerCommand}" 
+                           PassEventArgsToCommand="True"/>
+                <dx:EventToCommand EventName="TextChanged" 
+                           Command="{Binding XmlTextChangedCommand}"/>
+                <dx:EventToCommand EventName="PreviewMouseUp" 
+                           Command="{Binding AvalonTextSelectionChangedCommand}" />
+            </dx:Interaction.Behaviors>
+        </avalonEdit:TextEditor>
+    </Grid>
+</UserControl>

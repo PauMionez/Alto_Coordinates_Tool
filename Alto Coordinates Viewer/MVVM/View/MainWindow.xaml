@@ -9,6 +9,7 @@
                   xmlns:vm="clr-namespace:Alto_Coordinates_Viewer.MVVM.ViewModel"
                   xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
                   xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+                  xmlns:view="clr-namespace:Alto_Coordinates_Viewer.MVVM.View"
         mc:Ignorable="d"
         Background="{ui:ThemeResource}"
         SnapsToDevicePixels="True"
@@ -33,7 +34,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-
+        <!--Menu Buttons-->
         <ui:TitleBar Title="{Binding Path=Title}" Grid.Row="0" Grid.ColumnSpan="2"/>
         <ui:CardExpander Grid.Row="1" Grid.ColumnSpan="2" Margin="10" Padding="10" ContentPadding="0" Header="MENU">
             <ui:CardExpander.Content>
@@ -50,12 +51,6 @@
                                Foreground="White"
                                FontWeight="Bold"
                                BorderBrush="#00FFFF" >
-                            <ui:Button.Effect>
-                                <DropShadowEffect Color="#00FFFF"
-                                  BlurRadius="15"
-                                  ShadowDepth="0"
-                                  Opacity="1"/>
-                            </ui:Button.Effect>
                         </ui:Button>
                         <ui:Button Content="Select Image" 
                                 Command="{Binding SelectImageFilesCommand}" 
@@ -63,13 +58,32 @@
                                 Foreground="White"
                                 FontWeight="Bold"
                                 BorderBrush="#00FFFF">
-                            <ui:Button.Effect>
-                                <DropShadowEffect Color="#00FFFF"
-                                  BlurRadius="15"
-                                  ShadowDepth="0"
-                                  Opacity="1"/>
-                            </ui:Button.Effect>
                         </ui:Button>
+                        <ui:Button Content="Save Xml" 
+                            Command="{Binding SaveUpdateXmlFileCommand}" 
+                            Margin="5" 
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderBrush="#00FFFF">
+                        </ui:Button>
+
+                        <Border BorderBrush="#00FFFF" BorderThickness="0.6" CornerRadius="5" Margin="10 15 0 0">
+                            <StackPanel Orientation="Horizontal" >
+                                <ui:TextBlock Text="StrokeThickness:" Margin="5" Foreground="White" FontWeight="Bold"/>
+                                <ui:NumberBox Name="numberBox" 
+                                        Value="{Binding BoxTicknessUi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                        Width="100" 
+                                        Margin="5" 
+                                        Foreground="White"
+                                        FontWeight="Bold" Cursor="Arrow">
+                                    <dx:Interaction.Behaviors>
+                                        <dx:EventToCommand EventName="ValueChanged" 
+                                                               Command="{Binding BoxTicknessUiChangedCommand}" 
+                                                               PassEventArgsToCommand="True"/>
+                                    </dx:Interaction.Behaviors>
+                                </ui:NumberBox>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </ui:CardExpander.Content>
@@ -85,70 +99,21 @@
 
             <!--XML Viewer-->
             <TextBlock Text="Xml Coding Entry" Margin="60 1 0 0" FontSize="12" Foreground="White"/>
-            <avalonEdit:TextEditor Name="avalonTextEditor" SyntaxHighlighting="XML" FontFamily="Consolas" 
-                                   FontSize="{Binding XmlTextFontSize}" WordWrap="True" Margin="30 20 20 20" 
-                                   Document="{Binding CodingTxtDocument, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                   VirtualizingPanel.IsVirtualizing="True" ShowLineNumbers="True" Background="White" >
-                <dx:Interaction.Behaviors>
-                    <dx:EventToCommand EventName="Loaded" Command="{Binding AvalonTextEditor_LoadedCommand}" CommandParameter="{Binding ElementName=avalonTextEditor}"/>
-                    <dx:EventToCommand EventName="PreviewMouseWheel" Command="{Binding ZoomXmlTextViewerCommand}" PassEventArgsToCommand="True"/>
-                    <dx:EventToCommand EventName="TextChanged" Command="{Binding XmlTextChangedCommand}"/>
-                    <dx:EventToCommand EventName="PreviewMouseUp" Command="{Binding AvalonTextSelectionChangedCommand}" />
-                </dx:Interaction.Behaviors>
-            </avalonEdit:TextEditor>
+            <Grid Grid.Column="0" Margin="30 20 20 20" >
+                <view:AltoXmlViewer/>
+            </Grid>
 
-
+            <!--Image Viewer-->
             <TextBlock Grid.Column="1" Text="Image Viewer" Margin="60 1 0 0" FontSize="12" Foreground="White"/>
-            <StackPanel Background="White" Grid.Column="1"  Margin="30 20 20 20">
-                <!--<ScrollViewer Name="scrollViewerControl" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" >
-                    <Image Grid.Column="1" x:Name="image" Source="{Binding SelectedImageSource}" Stretch="Uniform" CacheMode="BitmapCache" Margin="30 20 20 20" />
-                </ScrollViewer>-->
-                <Grid>
-                    <ScrollViewer >
-                        <Grid>
-                            <Image x:Name="DocumentImage" Source="{Binding SelectedImageSource}" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Top">
-                                <dx:Interaction.Behaviors>
-                                    <dx:EventToCommand EventName="SizeChanged"
-                                                       Command="{Binding ImageSizeChangedCommand}"
-                                                       PassEventArgsToCommand="True"/>
-                                </dx:Interaction.Behaviors>
-                            </Image>
-                            <Canvas x:Name="OverlayCanvas"
-                                        IsHitTestVisible="False"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Top"
-                                        Width="{Binding RenderedImageWidth}"
-                                        Height="{Binding RenderedImageHeight}">
-                                <ItemsControl ItemsSource="{Binding AltoCollection}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <Canvas />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemContainerStyle>
-                                        <Style>
-                                            <Setter Property="Canvas.Left" Value="{Binding ScaledX}" />
-                                            <Setter Property="Canvas.Top" Value="{Binding ScaledY}" />
-                                        </Style>
-                                    </ItemsControl.ItemContainerStyle>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Rectangle Stroke="{Binding ColorBox}"
-                                                       StrokeThickness="1"
-                                                       Width="{Binding ScaledWidth}"
-                                                       Height="{Binding ScaledHeight}"
-                                                       Fill="Transparent">
-                                            </Rectangle>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Canvas>
-                        </Grid>
-                    </ScrollViewer>
-                </Grid>
+            
+            <ScrollViewer Name="scrollViewerControl" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                 <view:ImageViewer/>
+            </ScrollViewer>
 
+            <!--<ui:DynamicScrollViewer x:Name="dynamicScrollViewer" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <view:ImageViewer/>
+            </ui:DynamicScrollViewer>-->
 
-            </StackPanel>
 
         </Grid>
     </Grid>

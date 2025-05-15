@@ -76,8 +76,13 @@ namespace Alto_Coordinates_Viewer.MVVM.Model
             set { _colorBox = value; RaisePropertiesChanged(nameof(ColorBox)); }
         }
 
-        public string XmlLine { get; set; } // The original <String>...</String><SP.../> line
+        private int _boxTickness;
 
+        public int BoxTickness
+        {
+            get { return _boxTickness; }
+            set { _boxTickness = value; RaisePropertiesChanged(nameof(BoxTickness)); }
+        }
 
         //public double X { get; set; }
         //public double Y { get; set; }
