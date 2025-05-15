@@ -217,12 +217,9 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         {
             try
             {
-                //string imageFilePath = GetFilePath(@"Select image files (*.tiff)", "*.tiff", "Open multiple tiff documents");
-                //if (imageFilePath == null) return;
 
                 List<string> ImageExtensionCollection = new List<string> { "jpg", "jpeg", "png", "tif", "tiff" };
 
-                // Build the file filter string like: "Image files (*.jpg;*.jpeg;*.png;*.tif;*.tiff)|*.jpg;*.jpeg;*.png;*.tif;*.tiff"
                 string filterExtensions = string.Join(";", ImageExtensionCollection.Select(ext => $"*.{ext}"));
                 string filter = $"Image files ({filterExtensions})|{filterExtensions}";
 
