@@ -71,11 +71,11 @@
                             <StackPanel Orientation="Horizontal" >
                                 <ui:TextBlock Text="StrokeThickness:" Margin="5" Foreground="White" FontWeight="Bold"/>
                                 <ui:NumberBox Name="numberBox" 
-                                        Value="{Binding BoxTicknessUi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                        Width="100" 
-                                        Margin="5" 
-                                        Foreground="White"
-                                        FontWeight="Bold" Cursor="Arrow">
+                                              Value="{Binding BoxTicknessUi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                              Width="100" 
+                                              Margin="5" 
+                                              Foreground="White"
+                                              FontWeight="Bold" Cursor="Arrow">
                                     <dx:Interaction.Behaviors>
                                         <dx:EventToCommand EventName="ValueChanged" 
                                                                Command="{Binding BoxTicknessUiChangedCommand}" 
@@ -105,14 +105,10 @@
 
             <!--Image Viewer-->
             <TextBlock Grid.Column="1" Text="Image Viewer" Margin="60 1 0 0" FontSize="12" Foreground="White"/>
-            
             <ScrollViewer Name="scrollViewerControl" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                  <view:ImageViewer/>
             </ScrollViewer>
 
-            <!--<ui:DynamicScrollViewer x:Name="dynamicScrollViewer" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                <view:ImageViewer/>
-            </ui:DynamicScrollViewer>-->
 
 
         </Grid>

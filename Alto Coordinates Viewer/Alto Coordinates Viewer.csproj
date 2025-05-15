@@ -142,7 +142,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Services\ScaleTransformConverter.cs" />
+    <Compile Include="Services\TagChangeColor.cs" />
     <Page Include="MVVM\View\AltoXmlViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
