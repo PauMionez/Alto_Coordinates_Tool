@@ -15,7 +15,7 @@
         SnapsToDevicePixels="True"
         UseLayoutRounding="True"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None" WindowState="Maximized" Height="450" Width="800">
+        WindowStyle="None" WindowState="Maximized" Height="450" Width="1000">
     
     
     <ui:FluentWindow.DataContext>
@@ -69,7 +69,7 @@
 
                         <Border BorderBrush="#00FFFF" BorderThickness="0.6" CornerRadius="5" Margin="10 15 0 0">
                             <StackPanel Orientation="Horizontal" >
-                                <ui:TextBlock Text="StrokeThickness:" Margin="5" Foreground="White" FontWeight="Bold"/>
+                                <ui:TextBlock Text="Boxes Thickness:" Margin="5" Foreground="White" FontWeight="Bold"/>
                                 <ui:NumberBox Name="numberBox" 
                                               Value="{Binding BoxTicknessUi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                               Width="150" 
@@ -82,6 +82,21 @@
                                                                PassEventArgsToCommand="True"/>
                                     </dx:Interaction.Behaviors>
                                 </ui:NumberBox>
+                            </StackPanel>
+                        </Border>
+
+                        <Border BorderBrush="#00FFFF" BorderThickness="0.6" CornerRadius="5" Margin="10 15 0 0">
+                            <StackPanel Orientation="Horizontal" >
+                                
+                                <CheckBox Name="checkBox" 
+                                            IsChecked="{Binding IsAutoHighlightString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                            Margin="5" 
+                                            Foreground="White" 
+                                            FontWeight="Bold" Cursor="Arrow">
+                                    <CheckBox.Content>
+                                        <TextBlock TextWrapping="Wrap" Text="Activate Auto-Highlight"/>
+                                    </CheckBox.Content>
+                                </CheckBox>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -99,9 +114,9 @@
 
             <!--XML Viewer-->
             <TextBlock  Margin="60 1 0 0" FontSize="12" Foreground="White">
-                <Run Text="Xml: ( "/>
+                <Run Text="Xml: ("/>
                 <Run Text="{Binding XmlFileName}"/>
-                <Run Text=" )"/>
+                <Run Text=")"/>
             </TextBlock>
             <Grid Grid.Column="0" Margin="30 20 20 20" >
                 <view:AltoXmlViewer/>
@@ -109,9 +124,9 @@
 
             <!--Image Viewer-->
             <TextBlock Grid.Column="1" Margin="60 1 0 0" FontSize="12" Foreground="White">
-                <Run Text="Image: ( "/>
+                <Run Text="Image: ("/>
                 <Run Text="{Binding ImageFileName}"/>
-                <Run Text=" )"/>
+                <Run Text=")"/>
             </TextBlock>
             <ScrollViewer Name="scrollViewerControl" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                  <view:ImageViewer/>

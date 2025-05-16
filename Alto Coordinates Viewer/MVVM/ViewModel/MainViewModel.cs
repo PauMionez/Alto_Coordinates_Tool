@@ -6,18 +6,16 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Alto_Coordinates_Viewer.MVVM.Model;
 using Alto_Coordinates_Viewer.Services;
 using DevExpress.Mvvm;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Rendering;
 using ICSharpCode.AvalonEdit.Utils;
 namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 {
@@ -25,14 +23,15 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
     {
         public DelegateCommand<MouseWheelEventArgs> ZoomXmlTextViewerCommand { get; private set; }
         public DelegateCommand<MouseWheelEventArgs> ZoomImageViewerCommand { get; private set; }
-        public DelegateCommand<MouseButtonEventArgs> AutoHighlightStringCommand { get; private set; }
+        public DelegateCommand AutoHighlightStringCommand { get; private set; }
         public DelegateCommand<TextEditor> AvalonTextEditor_LoadedCommand { get; private set; }
         public AsyncCommand SelectAltoFilesCommand { get; private set; }
         public AsyncCommand SelectImageFilesCommand { get; private set; }
         public DelegateCommand SaveUpdateXmlFileCommand { get; private set; }
         public DelegateCommand XmlTextChangedCommand { get; private set; }
-        public DelegateCommand AvalonTextSelectionChangedCommand { get; private set; }
+
         public DelegateCommand BoxTicknessUiChangedCommand { get; private set; }
+
 
         #region Properties
 
@@ -89,7 +88,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             get { return _codingTextControl; }
             set { _codingTextControl = value; RaisePropertiesChanged(nameof(CodingTextControl)); }
         }
-     
+
         private double _DefaultZoom;
         public double DefaultZoom
         {
@@ -161,6 +160,16 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         }
 
 
+        private bool _isAutoHighlightString;
+
+        public bool IsAutoHighlightString
+        {
+            get { return _isAutoHighlightString; }
+            set { _isAutoHighlightString = value; RaisePropertiesChanged(nameof(IsAutoHighlightString)); }
+        }
+
+
+
         #endregion
 
         #region Fields
@@ -174,13 +183,13 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 
             ZoomXmlTextViewerCommand = new DelegateCommand<MouseWheelEventArgs>(ZoomXmlTextViewer);
             ZoomImageViewerCommand = new DelegateCommand<MouseWheelEventArgs>(ZoomImageViewer);
-            AutoHighlightStringCommand = new DelegateCommand<MouseButtonEventArgs>(AutoHighlightString);
+            AutoHighlightStringCommand = new DelegateCommand(AutoHighlightString);
             AvalonTextEditor_LoadedCommand = new DelegateCommand<TextEditor>(AvalonTextEditor_Loaded);
             SelectAltoFilesCommand = new AsyncCommand(SelectAltoFiles);
             SelectImageFilesCommand = new AsyncCommand(SelectImageFiles);
             SaveUpdateXmlFileCommand = new DelegateCommand(SaveUpdateXmlFile);
             XmlTextChangedCommand = new DelegateCommand(XmlTextChanged);
-            AvalonTextSelectionChangedCommand = new DelegateCommand(AvalonTextSelectionChanged);
+
             BoxTicknessUiChangedCommand = new DelegateCommand(BoxTicknessUiChanged);
 
             AltoCollection = new ObservableCollection<AltoModel>();
@@ -189,9 +198,14 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             BoxTicknessUi = 5;
             DefaultZoom = 0.5;
             ImageViewerScale = DefaultZoom;
+
+            IsAutoHighlightString = false;
+
+            ImageFileName = "...";
+            XmlFileName = "...";
         }
 
-       
+
 
 
         #region File Selection
@@ -334,106 +348,55 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             }
         }
 
-        /// <summary>
-        /// Highlight the selected <String> in the text editor
-        /// And update the color of the corresponding ALTO boxes
-        /// </summary>
-        private void AvalonTextSelectionChanged()
-        {
-            try
-            {
-                string selectedText = CodingTextControl.TextArea.Selection.GetText()?.Trim();
-
-                Regex stringRegex = new Regex(@"<String ID=""(.*?)"" HPOS=""(.*?)"" VPOS=""(.*?)"" WIDTH=""(.*?)"" HEIGHT=""(.*?)"" WC=""(.*?)"" CONTENT=""(.*?)""", RegexOptions.Compiled);
-                Match match = stringRegex.Match(selectedText);
-
-                if (match.Success)
-                {
-                    // Extract coordinates of selected string
-                    double selectedX = double.Parse(match.Groups[2].Value);
-                    double selectedY = double.Parse(match.Groups[3].Value);
-                    double selectedWidth = double.Parse(match.Groups[4].Value);
-                    double selectedHeight = double.Parse(match.Groups[5].Value);
-
-                    foreach (var word in AltoCollection)
-                    {
-                        // Checking whether its position and size match the coordinates of the <String>
-                        // Floating-point comparison with a small tolerance (0.1)
-                        if (Math.Abs(word.X - selectedX) < 0.1 &&
-                            Math.Abs(word.Y - selectedY) < 0.1 &&
-                            Math.Abs(word.Width - selectedWidth) < 0.1 &&
-                            Math.Abs(word.Height - selectedHeight) < 0.1)
-                        {
-                            word.ColorBox = Brushes.Green;
-                            word.OpacityBackground = 0.3;
-                            word.BackgroundBoxColor = Brushes.Green;
-                        }
-                        else
-                        {
-                            word.ColorBox = Brushes.Red;
-                            word.OpacityBackground = 100;
-                            word.BackgroundBoxColor= Brushes.Transparent;
-                        }
-                    }
-                }
-                else
-                {
-                    // No <String> selected, reset all to Red
-                    foreach (var word in AltoCollection)
-                    {
-                        word.ColorBox = Brushes.Red;
-                        word.OpacityBackground = 100;
-                        word.BackgroundBoxColor = Brushes.Transparent;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage(ex);
-            }
-        }
 
         /// <summary>
-        /// Not Use
+        /// Highlights the entire <String ... />; tag under the caret and updates the selection
         /// </summary>
         /// <param name="e"></param>
-        private void AutoHighlightString(MouseButtonEventArgs e)
+        private void AutoHighlightString()
         {
             try
             {
+                SelectedStringChanged highlight = new SelectedStringChanged();
+                
+                if (CodingTextControl?.Document == null) { return; }
 
-                var editor = e.Source as TextEditor;
-                if (editor == null)
-                    return;
-
-                var textView = editor.TextArea.TextView;
-                textView.EnsureVisualLines();
-
-                var position = textView.GetPosition(e.GetPosition(textView));
-                if (position == null) return;
-
-                int offset = editor.Document.GetOffset(position.Value.Location);
-                string fullText = editor.Document.Text;
-
-                Regex stringRegex = new Regex(@"<String\s+[^>]*?/>", RegexOptions.Compiled);
-
-                foreach (Match match in stringRegex.Matches(fullText))
+                if (IsAutoHighlightString == false) 
                 {
-                    if (offset >= match.Index && offset <= match.Index + match.Length)
-                    {
-                        editor.Select(match.Index, match.Length);
-                        break;
-                    }
-                    
+                    highlight.AvalonTextSelectionChanged(CodingTextControl, AltoCollection); 
+                    return; 
                 }
 
-              
+                // Delay until AvalonEdit completes its built-in selection handling
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+                {
+                    string fullText = CodingTextControl.Text;
+                    int selectionStart = CodingTextControl.SelectionStart;
+
+                    // Regex to match <String ... />
+                    Regex stringRegex = new Regex(@"<String\s+[^>]*?/>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+                    foreach (Match match in stringRegex.Matches(fullText))
+                    {
+                        // If the caret or selection start is inside the tag
+                        if (selectionStart >= match.Index && selectionStart <= match.Index + match.Length)
+                        {
+                            CodingTextControl.Select(match.Index, match.Length);
+                            CodingTextControl.ScrollToLine(CodingTextControl.Document.GetLineByOffset(match.Index).LineNumber);
+
+                            highlight.AvalonTextSelectionChanged(CodingTextControl, AltoCollection);
+
+                            return;
+                        }
+                    }
+                }), DispatcherPriority.ApplicationIdle); // Ensures this runs after AvalonEdit finalizes selection
             }
             catch (Exception ex)
             {
                 ErrorMessage(ex);
             }
         }
+
 
         /// <summary>
         /// Zoom Xml Text Control
@@ -468,7 +431,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             }
         }
 
-       
+
         private void ZoomImageViewer(MouseWheelEventArgs args)
         {
             try
@@ -539,10 +502,11 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                 //gets the string coordinates from the XML
                 foreach (var sElement in strings)
                 {
+
                     if (double.TryParse(sElement.Attribute("HPOS")?.Value, out double hpos) &&
-                        double.TryParse(sElement.Attribute("VPOS")?.Value, out double vpos) &&
-                        double.TryParse(sElement.Attribute("WIDTH")?.Value, out double width) &&
-                        double.TryParse(sElement.Attribute("HEIGHT")?.Value, out double height))
+                       double.TryParse(sElement.Attribute("VPOS")?.Value, out double vpos) &&
+                       double.TryParse(sElement.Attribute("WIDTH")?.Value, out double width) &&
+                       double.TryParse(sElement.Attribute("HEIGHT")?.Value, out double height))
                     {
                         AltoCollection.Add(new AltoModel
                         {
@@ -552,13 +516,13 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                             Height = height,
                         });
                     }
+
                 }
 
                 if (pageElement != null)
                 {
                     OriginalImagePixelWidth = double.Parse(pageElement.Attribute("WIDTH").Value);
                     OriginalImagePixelHeight = double.Parse(pageElement.Attribute("HEIGHT").Value);
-
 
 
                     // Refresh red box scaling
@@ -659,7 +623,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 
         }
 
-       
+
 
 
 
@@ -672,6 +636,78 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 
     #region dump
 
+    //private T FindParent<T>(DependencyObject child) where T : DependencyObject
+    //{
+    //    DependencyObject parent = VisualTreeHelper.GetParent(child);
+    //    while (parent != null && !(parent is T))
+    //    {
+    //        parent = VisualTreeHelper.GetParent(parent);
+    //    }
+    //    return parent as T;
+    //}
+
+    //var editor = e.Source as TextEditor;
+    //if (editor == null)
+    //   { return; }
+
+    //var textView = editor.TextArea.TextView;
+    //textView.EnsureVisualLines();
+
+    //var position = textView.GetPosition(e.GetPosition(textView));
+    //if (position == null) { return; }
+
+    //int offset = editor.Document.GetOffset(position.Value.Location);
+    //string fullText = editor.Document.Text;
+
+    //Regex stringRegex = new Regex(@"<String\s+[^>]*?/>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    //foreach (Match match in stringRegex.Matches(fullText))
+    //{
+    //    if (offset >= match.Index && offset <= match.Index + match.Length)
+    //    {
+    //        editor.Select(match.Index, match.Length);
+    //        break;
+    //    }
+
+    //}
+    //if (parameter is MouseButtonEventArgs e)
+    //{
+    //    // Get TextEditor from CommandParameter
+    //    var editor = e.Source as TextEditor ?? e.OriginalSource as TextEditor;
+    //    if (editor == null && e.Source is DependencyObject source)
+    //    {
+    //        editor = FindParent<TextEditor>(source);
+    //    }
+
+    //    if (editor == null)
+    //    { return; }
+
+    //    var textView = editor.TextArea.TextView;
+    //    textView.EnsureVisualLines(); // Ensure visuals are valid
+
+    //    var mousePosition = e.GetPosition(textView);
+    //    var logicalPos = textView.GetPosition(mousePosition);
+    //    if (logicalPos == null)
+    //       { return; }
+
+    //    int offset = editor.Document.GetOffset(logicalPos.Value.Location);
+    //    string fullText = editor.Document.Text;
+
+    //    if (offset < 0 || offset > fullText.Length)
+    //       { return; }
+
+    //    Regex stringRegex = new Regex(@"<String\s+[^>]*?/>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    //    foreach (Match match in stringRegex.Matches(fullText))
+    //    {
+    //        if (offset >= match.Index && offset <= match.Index + match.Length)
+    //        {
+    //            editor.Select(match.Index, match.Length);
+    //            editor.ScrollToLine(editor.Document.GetLineByOffset(match.Index).LineNumber);
+    //            break;
+    //        }
+    //    }
+    //}
 
     //protected override void ColorizeLine(DocumentLine line)
     //{

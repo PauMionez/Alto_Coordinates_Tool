@@ -13,7 +13,7 @@
              >
     <Grid >
         <avalonEdit:TextEditor Name="avalonTextEditor" SyntaxHighlighting="XML" FontFamily="Consolas" 
-                       FontSize="{Binding XmlTextFontSize}" WordWrap="True" Background="#FF1A1A1A"
+                       FontSize="{Binding XmlTextFontSize}" WordWrap="True" Background="#FF1A1A1A" Foreground="White"
                        Document="{Binding CodingTxtDocument, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                        VirtualizingPanel.IsVirtualizing="True" ShowLineNumbers="True"  >
             <dx:Interaction.Behaviors>
@@ -26,10 +26,8 @@
                 <dx:EventToCommand EventName="TextChanged" 
                            Command="{Binding XmlTextChangedCommand}"/>
                 <dx:EventToCommand EventName="PreviewMouseUp" 
-                           Command="{Binding AvalonTextSelectionChangedCommand}" />
-                <!--<dx:EventToCommand EventName="PreviewMouseDown" 
                            Command="{Binding AutoHighlightStringCommand}" 
-                           PassEventArgsToCommand="True"/>-->
+                           PassEventArgsToCommand="True"/>
             </dx:Interaction.Behaviors>
         </avalonEdit:TextEditor>
     </Grid>
