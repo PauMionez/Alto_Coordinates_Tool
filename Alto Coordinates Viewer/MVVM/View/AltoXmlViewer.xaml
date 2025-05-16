@@ -27,6 +27,9 @@
                            Command="{Binding XmlTextChangedCommand}"/>
                 <dx:EventToCommand EventName="PreviewMouseUp" 
                            Command="{Binding AvalonTextSelectionChangedCommand}" />
+                <!--<dx:EventToCommand EventName="PreviewMouseDown" 
+                           Command="{Binding AutoHighlightStringCommand}" 
+                           PassEventArgsToCommand="True"/>-->
             </dx:Interaction.Behaviors>
         </avalonEdit:TextEditor>
     </Grid>

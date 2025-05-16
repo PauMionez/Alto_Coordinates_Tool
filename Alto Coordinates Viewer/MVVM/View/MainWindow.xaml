@@ -72,9 +72,9 @@
                                 <ui:TextBlock Text="StrokeThickness:" Margin="5" Foreground="White" FontWeight="Bold"/>
                                 <ui:NumberBox Name="numberBox" 
                                               Value="{Binding BoxTicknessUi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                              Width="100" 
+                                              Width="150" 
                                               Margin="5" 
-                                              Foreground="White"
+                                              Foreground="White" 
                                               FontWeight="Bold" Cursor="Arrow">
                                     <dx:Interaction.Behaviors>
                                         <dx:EventToCommand EventName="ValueChanged" 
@@ -98,17 +98,26 @@
             </Grid.ColumnDefinitions>
 
             <!--XML Viewer-->
-            <TextBlock Text="Xml Coding Entry" Margin="60 1 0 0" FontSize="12" Foreground="White"/>
+            <TextBlock  Margin="60 1 0 0" FontSize="12" Foreground="White">
+                <Run Text="Xml: ( "/>
+                <Run Text="{Binding XmlFileName}"/>
+                <Run Text=" )"/>
+            </TextBlock>
             <Grid Grid.Column="0" Margin="30 20 20 20" >
                 <view:AltoXmlViewer/>
             </Grid>
 
             <!--Image Viewer-->
-            <TextBlock Grid.Column="1" Text="Image Viewer" Margin="60 1 0 0" FontSize="12" Foreground="White"/>
+            <TextBlock Grid.Column="1" Margin="60 1 0 0" FontSize="12" Foreground="White">
+                <Run Text="Image: ( "/>
+                <Run Text="{Binding ImageFileName}"/>
+                <Run Text=" )"/>
+            </TextBlock>
             <ScrollViewer Name="scrollViewerControl" Grid.Column="1" Margin="30 20 20 20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                  <view:ImageViewer/>
             </ScrollViewer>
-
+            
+            
 
 
         </Grid>

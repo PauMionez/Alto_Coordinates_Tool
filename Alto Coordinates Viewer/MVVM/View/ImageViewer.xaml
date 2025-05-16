@@ -51,7 +51,8 @@
                                            StrokeThickness="{Binding BoxTickness}"
                                            Width="{Binding ScaledWidth}"
                                            Height="{Binding ScaledHeight}"
-                                           Fill="Transparent">
+                                           Fill="{Binding BackgroundBoxColor}"
+                                           Opacity="{Binding OpacityBackground}">
                                 </Rectangle>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
