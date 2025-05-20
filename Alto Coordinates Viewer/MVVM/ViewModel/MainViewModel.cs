@@ -29,6 +29,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
         public AsyncCommand SelectImageFilesCommand { get; private set; }
         public DelegateCommand SaveUpdateXmlFileCommand { get; private set; }
         public DelegateCommand XmlTextChangedCommand { get; private set; }
+        public DelegateCommand InsertStringTagCommand { get; private set; }
 
         public DelegateCommand BoxTicknessUiChangedCommand { get; private set; }
 
@@ -189,6 +190,7 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             SelectImageFilesCommand = new AsyncCommand(SelectImageFiles);
             SaveUpdateXmlFileCommand = new DelegateCommand(SaveUpdateXmlFile);
             XmlTextChangedCommand = new DelegateCommand(XmlTextChanged);
+            InsertStringTagCommand = new DelegateCommand(InsertStringTag);
 
             BoxTicknessUiChangedCommand = new DelegateCommand(BoxTicknessUiChanged);
 
@@ -204,6 +206,8 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             ImageFileName = "...";
             XmlFileName = "...";
         }
+
+
 
 
 
@@ -358,13 +362,13 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
             try
             {
                 SelectedStringChanged highlight = new SelectedStringChanged();
-                
+
                 if (CodingTextControl?.Document == null) { return; }
 
-                if (IsAutoHighlightString == false) 
+                if (IsAutoHighlightString == false)
                 {
-                    highlight.AvalonTextSelectionChanged(CodingTextControl, AltoCollection); 
-                    return; 
+                    highlight.AvalonTextSelectionChanged(CodingTextControl, AltoCollection);
+                    return;
                 }
 
                 // Delay until AvalonEdit completes its built-in selection handling
@@ -508,8 +512,10 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
                        double.TryParse(sElement.Attribute("WIDTH")?.Value, out double width) &&
                        double.TryParse(sElement.Attribute("HEIGHT")?.Value, out double height))
                     {
+
                         AltoCollection.Add(new AltoModel
                         {
+                            StringName = sElement.Attribute("ID")?.Value,
                             X = hpos,
                             Y = vpos,
                             Width = width,
@@ -623,7 +629,71 @@ namespace Alto_Coordinates_Viewer.MVVM.ViewModel
 
         }
 
+        private void InsertStringTag()
+        {
+            try
+            {
 
+                //var Laststring = AltoCollection.LastOrDefault(x => !string.IsNullOrEmpty(x.StringName));
+
+                //if (Laststring == null) { return; }
+
+                string selectedText = CodingTextControl.TextArea.Selection.GetText()?.Trim();
+
+                Regex stringRegex = new Regex(@"<String ID=""(.*?)"" HPOS=""(.*?)"" VPOS=""(.*?)"" WIDTH=""(.*?)"" HEIGHT=""(.*?)"" WC=""(.*?)"" CONTENT=""(.*?)""", RegexOptions.Compiled);
+                Match match = stringRegex.Match(selectedText);
+
+                if (match.Success)
+                {
+                    // Extract coordinates of selected string
+                    double selectedX = double.Parse(match.Groups[2].Value);
+                    double selectedY = double.Parse(match.Groups[3].Value);
+                    double selectedWidth = double.Parse(match.Groups[4].Value);
+                    double selectedHeight = double.Parse(match.Groups[5].Value);
+
+
+                    // Scan all <String> IDs in the current document
+                    Regex idRegex = new Regex(@"<String ID=""(\D*?)(\d+)""", RegexOptions.Compiled);
+                    MatchCollection allMatches = idRegex.Matches(CodingTextControl.Text);
+
+                    int maxIdNum = 0;
+                    string idPrefix = "string_";
+
+                    foreach (Match m in allMatches)
+                    {
+                        if (int.TryParse(m.Groups[2].Value, out int num))
+                        {
+                            if (num > maxIdNum)
+                            {
+                                maxIdNum = num;
+                                idPrefix = m.Groups[1].Value;
+                            }
+                        }
+                    }
+
+                    string newId = $"{idPrefix}{maxIdNum + 1}";
+
+                    // Create a new String tag with the same coordinates
+                    double newX = selectedX + 40;
+
+                    string newStringTag = $"<String ID=\"{newId}\" HPOS=\"{newX}\" VPOS=\"{selectedY}\" WIDTH=\"{selectedWidth}\" HEIGHT=\"{selectedHeight}\" WC=\"0.95\" CONTENT=\"NewString\"/>";
+
+                    // Find the offset of the end of the selected <String> tag
+                    int insertOffset = CodingTextControl.SelectionStart + CodingTextControl.SelectionLength;
+
+                    // Add the new string on a new line
+                    string textToInsert = Environment.NewLine + "\t\t\t\t\t\t\t" + newStringTag;
+
+                    CodingTextControl.Document.Insert(insertOffset, textToInsert);
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage(ex);
+            }
+        }
 
 
 

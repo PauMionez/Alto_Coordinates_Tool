@@ -15,7 +15,7 @@
         SnapsToDevicePixels="True"
         UseLayoutRounding="True"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None" WindowState="Maximized" Height="450" Width="1000">
+        WindowStyle="None" WindowState="Maximized" Height="550" Width="1000">
     
     
     <ui:FluentWindow.DataContext>
@@ -61,6 +61,13 @@
                         </ui:Button>
                         <ui:Button Content="Save Xml" 
                             Command="{Binding SaveUpdateXmlFileCommand}" 
+                            Margin="5" 
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderBrush="#00FFFF">
+                        </ui:Button>
+                        <ui:Button Content="Insert String" 
+                            Command="{Binding InsertStringTagCommand}" 
                             Margin="5" 
                             Foreground="White"
                             FontWeight="Bold"

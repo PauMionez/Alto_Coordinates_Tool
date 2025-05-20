@@ -12,6 +12,14 @@ namespace Alto_Coordinates_Viewer.MVVM.Model
     class AltoModel : BindableBase
     {
 
+        private string _StringName;
+        public string StringName
+        {
+            get { return _StringName; }
+            set { _StringName = value; RaisePropertiesChanged(nameof(StringName)); }
+        }
+
+
         private double _x;
         public double X
         {
